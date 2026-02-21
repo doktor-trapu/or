@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Czech Business Register Search (ARES)</title>
+    <title>Vyhledávání firem (ARES / OR)</title>
     <style>
         :root {
             --primary-color: #0056b3;
@@ -22,7 +22,7 @@
             padding: 50px 20px 20px;
             margin: 0;
             min-height: 100vh;
-            box-sizing: border-box; /* Fixes the overflow issue */
+            box-sizing: border-box;
         }
 
         .container {
@@ -31,7 +31,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 600px;
+            max-width: 650px;
             flex-grow: 0;
         }
 
@@ -96,7 +96,6 @@
 
         .result-card {
             padding: 15px 20px;
-            border-left: 4px solid var(--primary-color);
             border-radius: 4px;
             background-color: #fafafa;
             border: 1px solid var(--border-color);
@@ -182,9 +181,43 @@
                 color: #155724;
             }
 
-        /* Fixed Footer Styles */
+        /* Nové styly pro statutární orgán */
+        .organ-section {
+            margin-top: 12px;
+            background-color: #fff;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+
+        .zpusob-jednani {
+            margin-bottom: 12px;
+        }
+
+        .zj-text {
+            margin: 6px 0;
+            font-style: italic;
+            color: #444;
+            line-height: 1.4;
+        }
+
+        .member-list {
+            margin: 6px 0 0 0;
+            padding-left: 20px;
+        }
+
+            .member-list li {
+                margin-bottom: 6px;
+                line-height: 1.5;
+            }
+
+        .member-role {
+            color: #666;
+            font-size: 0.9em;
+        }
+
         .footer {
-            margin-top: 30px; /* Keeps it tight under the container */
+            margin-top: 30px;
             font-size: 0.85rem;
             color: #888;
             text-align: center;
@@ -402,28 +435,91 @@
 
                 const data = await response.json();
                 const zaznam = data.zaznamy ? data.zaznamy[0] : data;
+
+                // 1. Zpracování soudu a spisové značky
                 let znacky = zaznam.spisovaZnacka || [];
                 if (!Array.isArray(znacky)) znacky = [znacky];
-
                 const aktivniZnacka = znacky[0];
+
+                let vrHtml = '';
 
                 if (aktivniZnacka) {
                     let oddil = aktivniZnacka.oddil || "";
                     let vlozka = aktivniZnacka.vlozka || "";
                     let soud = aktivniZnacka.soud || "Neznámý soud";
-
                     let parts = [oddil, vlozka].filter(p => p).join(" ");
 
-                    el.innerHTML = `
+                    vrHtml += `
                         ${createRow('Rejstříkový soud', soud)}
                         ${createRow('Spisová značka', parts || 'N/A')}
                     `;
                 } else {
-                    el.innerHTML = '<span class="loading-text">Subjekt zapsán v OR, ale data spisové značky chybí.</span>';
+                    vrHtml += '<p class="loading-text">Subjekt zapsán v OR, ale data spisové značky chybí.</p>';
                 }
 
+                // 2. Zpracování statutárních orgánů (Jednatelé, způsob jednání atd.)
+                if (zaznam.statutarniOrgany && Array.isArray(zaznam.statutarniOrgany)) {
+                    zaznam.statutarniOrgany.forEach(organ => {
+                        let organHtml = '<div class="organ-section">';
+
+                        // Způsob jednání
+                        if (organ.zpusobJednani && Array.isArray(organ.zpusobJednani)) {
+                            let zpusobText = organ.zpusobJednani.map(z => z.text || '').filter(t => t).join('\n');
+                            if (zpusobText) {
+                                organHtml += `
+                                    <div class="zpusob-jednani">
+                                        <strong>Způsob jednání:</strong>
+                                        <div class="zj-text">${escapeHtml(zpusobText).replace(/\n/g, '<br>')}</div>
+                                        <button class="copy-btn" style="margin-left: 0;" data-value="${escapeHtml(zpusobText)}" onclick="copyToClipboard(this)">Kopírovat způsob jednání</button>
+                                    </div>
+                                `;
+                            }
+                        }
+
+                        // Členové orgánu (konkrétní osoby)
+                        if (organ.clenoveStatorganu && Array.isArray(organ.clenoveStatorganu)) {
+                            let clenoveHtml = '<ul class="member-list">';
+                            organ.clenoveStatorganu.forEach(clen => {
+                                let jmeno = 'Neznámá osoba';
+                                let funkce = clen.funkce?.nazev || organ.nazevOrganu || 'Člen statutárního orgánu';
+
+                                // Zjištění jména (fyzická vs právnická osoba)
+                                if (clen.osoba) {
+                                    const o = clen.osoba;
+                                    const titulyPred = o.titulPred || '';
+                                    const titulyZa = o.titulZa ? ', ' + o.titulZa : '';
+                                    jmeno = `${titulyPred} ${o.jmeno} ${o.prijmeni}${titulyZa}`.trim().replace(/\s+/g, ' ');
+                                } else if (clen.pravnickaOsoba) {
+                                    jmeno = clen.pravnickaOsoba.obchodniJmeno || 'Právnická osoba';
+                                }
+
+                                const safeName = escapeHtml(jmeno);
+                                clenoveHtml += `
+                                    <li>
+                                        <span>${jmeno}</span> <span class="member-role">(${funkce})</span>
+                                        <button class="copy-btn" data-value="${safeName}" onclick="copyToClipboard(this)">Kopírovat jméno</button>
+                                    </li>
+                                `;
+                            });
+                            clenoveHtml += '</ul>';
+
+                            organHtml += `
+                                <div class="clenove-organu">
+                                    <strong>Statutární orgán:</strong>
+                                    ${clenoveHtml}
+                                </div>
+                            `;
+                        }
+
+                        organHtml += '</div>';
+                        vrHtml += organHtml;
+                    });
+                }
+
+                el.innerHTML = vrHtml;
+
             } catch (error) {
-                el.innerHTML = '<span class="loading-text" style="color:#d9534f">Nepodařilo se načíst data z OR.</span>';
+                el.innerHTML = '<span class="loading-text" style="color:#d9534f">Nepodařilo se načíst detailní data z OR.</span>';
             }
         }
 
