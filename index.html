@@ -184,7 +184,6 @@
                 color: #155724;
             }
 
-        /* Styly pro orgány */
         .organ-section {
             margin-top: 12px;
             background-color: #fff;
@@ -255,18 +254,126 @@
     </div>
 
     <script>
-        // Mapování právních forem
         const LEGAL_FORMS = {
+            "100": "Podnikající fyzická osoba tuzemská",
+            "101": "Fyzická osoba podnikající dle živnostenského zákona nezapsaná v obchodním rejstříku",
+            "102": "Fyzická osoba podnikající dle živnostenského zákona zapsaná v obchodním rejstříku",
+            "103": "Samostatně hospodařící rolník zapsaný v obchodním rejstříku",
+            "104": "Fyzická osoba podnikající dle jiných zákonů než živnostenského a zákona o zemědělství nezapsaná v obchodním rejstříku",
+            "105": "Fyzická osoba podnikající dle jiných zákonů než živnostenského a zákona o zemědělství nezapsaná v obchodním rejstříku",
+            "106": "Fyzická osoba podnikající dle jiných zákonů než živnostenského a zákona o zemědělství zapsaná v obchodním rejstříku",
+            "107": "Zemědělský podnikatel - fyzická osoba nezapsaná v obchodním rejstříku",
+            "108": "Zemědělský podnikatel - fyzická osoba zapsaná v obchodním rejstříku",
+            "111": "Veřejná obchodní společnost",
             "112": "Společnost s ručením omezeným",
+            "113": "Společnost komanditní",
+            "114": "Společnost komanditní na akcie",
+            "115": "Společný podnik",
+            "116": "Zájmové sdružení",
+            "117": "Nadace",
+            "118": "Nadační fond",
             "121": "Akciová společnost",
-            "101": "Fyzická osoba podnikající dle živnostenského zákona",
-            "105": "Fyzická osoba podnikající dle jiných zákonů",
+            "131": "Svépomocné zemědělské družstvo",
+            "141": "Obecně prospěšná společnost",
+            "145": "Společenství vlastníků jednotek",
+            "151": "Komoditní burza",
+            "152": "Garanční fond obchodníků s cennými papíry",
+            "161": "Ústav",
+            "201": "Zemědělské družstvo",
             "205": "Družstvo",
+            "211": "Družstevní podnik zemědělský",
+            "231": "Výrobní družstvo",
+            "232": "Spotřební družstvo",
+            "233": "Bytové družstvo",
+            "234": "Jiné družstvo",
+            "241": "Družstevní podnik (s 1 zakladatelem)",
+            "242": "Společný podnik (s více zakladateli)",
+            "251": "Zájmová organizace družstev",
+            "261": "Společná zájmová organizace družstev",
+            "301": "Státní podnik",
+            "302": "Národní podnik",
+            "311": "Státní banka československá",
+            "312": "Banka-státní peněžní ústav",
+            "313": "Česká národní banka",
+            "314": "Česká konsolidační agentura",
+            "325": "Organizační složka státu",
+            "326": "Stálý rozhodčí soud",
+            "331": "Příspěvková organizace zřízená územním samosprávným celkem",
+            "332": "Státní příspěvková organizace",
+            "333": "Státní příspěvková organizace ostatní",
+            "341": "Státní hospodářská organizace řízená okresním úřadem",
+            "343": "Obecní podnik",
+            "351": "Československé státní dráhy-státní organizace",
+            "352": "Státní organizace Správa železnic",
+            "353": "Rada pro veřejný dohled nad auditem",
+            "361": "Veřejnoprávní instituce",
+            "362": "Česká tisková kancelář",
+            "381": "Státní fond ze zákona",
+            "382": "Státní fond ze zákona nezapisující se do obchodního rejstříku",
+            "391": "Zdravotní pojišťovna (mimo VZP)",
+            "392": "Všeobecná zdravotní pojišťovna",
+            "401": "Sdružení mezinárodního obchodu",
+            "411": "Podnik se zahraniční majetkovou účastí",
+            "421": "Odštěpný závod zahraniční právnické osoby",
+            "422": "Organizační složka zahraničního nadačního fondu",
+            "423": "Organizační složka zahraniční nadace",
+            "424": "Zahraniční fyzická osoba",
+            "425": "Odštěpný závod zahraniční fyzické osoby",
+            "426": "Zastoupení zahraniční banky",
+            "441": "Podnik zahraničního obchodu",
+            "442": "Účelová zahraničně obchodní organizace",
+            "501": "Odštěpný závod",
+            "521": "Samostatná drobná provozovna (obecního úřadu)",
+            "525": "Vnitřní organizační jednotka organizační složky státu",
+            "601": "Vysoká škola (veřejná, státní)",
+            "641": "Školská právnická osoba",
+            "661": "Veřejná výzkumná instituce",
+            "671": "Veřejné neziskové ústavní zdravotnické zařízení",
+            "701": "Občanské sdružení",
+            "703": "Odborová organizace a organizace zaměstnavatelů",
+            "704": "Zvláštní organizace pro zastoupení českých zájmů v mezinárodních nevládních organizacích",
+            "705": "Podnik nebo hospodářské zařízení sdružení",
             "706": "Spolek",
-            "227": "Evropská společnost"
+            "707": "Odborová organizace",
+            "708": "Organizace zaměstnavatelů",
+            "711": "Politická strana, politické hnutí",
+            "715": "Podnik nebo hospodářské zařízení politické strany",
+            "721": "Církve a náboženské společnosti",
+            "722": "Evidované církevní právnické osoby",
+            "723": "Svazy církví a náboženských společností",
+            "731": "Organizační jednotka občanského sdružení",
+            "733": "Pobočná odborová organizace a organizace zaměstnavatelů",
+            "734": "Organizační jednotka zvláštní organizace pro zastoupení českých zájmů v mezinárodních nevládních organizacích",
+            "736": "Pobočný spolek",
+            "741": "Samosprávná stavovská organizace (profesní komora)",
+            "745": "Komora (hospodářská, agrární)",
+            "751": "Zájmové sdružení právnických osob",
+            "761": "Honební společenstvo",
+            "771": "Dobrovolný svazek obcí",
+            "801": "Obec",
+            "804": "Kraj",
+            "805": "Regionální rada regionu soudržnosti",
+            "811": "Městská část, městský obvod",
+            "906": "Zahraniční spolek",
+            "907": "Mezinárodní odborová organizace",
+            "908": "Mezinárodní organizace zaměstnavatelů",
+            "921": "Mezinárodní nevládní organizace",
+            "922": "Organizační jednotka mezinárodní nevládní organizace",
+            "931": "Evropské hospodářské zájmové sdružení",
+            "932": "Evropská společnost",
+            "933": "Evropská družstevní společnost",
+            "936": "Zahraniční pobočný spolek",
+            "937": "Pobočná mezinárodní odborová organizace",
+            "938": "Pobočná mezinárodní organizace zaměstnavatelů",
+            "941": "Evropské seskupení pro územní spolupráci",
+            "951": "Mezinárodní vojenská organizace vzniklá na základě mezinárodní smlouvy",
+            "952": "Konsorcium evropské výzkumné infrastruktury",
+            "960": "Právnická osoba zřízená zvláštním zákonem zapisovaná do veřejného rejstříku",
+            "961": "Svěřenský fond",
+            "962": "Zahraniční svěřenský fond",
+            "963": "Národní akreditační úřad pro terciární vzdělávání"
         };
 
-        // Mapování rejstříkových soudů ze zkratek na plné názvy
         const COURTS = {
             "MSPH": "Městský soud v Praze",
             "KSBR": "Krajský soud v Brně",
@@ -276,6 +383,15 @@
             "KSHK": "Krajský soud v Hradci Králové",
             "KSUL": "Krajský soud v Ústí nad Labem"
         };
+
+        // Převede text z ALL CAPS na běžné formátování (Title Case)
+        // Např. "JAN NOVÁK" -> "Jan Novák", "ANNA-MARIE" -> "Anna-Marie"
+        function toTitleCase(str) {
+            if (!str) return '';
+            return str.toLowerCase().replace(/(?:^|[\s-])\S/g, function (match) {
+                return match.toUpperCase();
+            });
+        }
 
         function escapeHtml(unsafe) {
             if (!unsafe) return '';
@@ -411,7 +527,7 @@
                 const address = company.sidlo?.textovaAdresa || 'N/A';
 
                 const lfCode = company.pravniForma;
-                const legalForm = lfCode ? `${lfCode} - ${LEGAL_FORMS[lfCode] || 'Jiné'}` : 'N/A';
+                const legalForm = lfCode ? `${lfCode} - ${LEGAL_FORMS[lfCode] || 'Neznámá právní forma'}` : 'N/A';
 
                 const safeName = escapeHtml(name);
                 const formattedIco = ico !== 'N/A' ? formatIco(ico) : 'N/A';
@@ -466,7 +582,6 @@
                     let oddil = aktivniZnacka.oddil || "";
                     let vlozka = aktivniZnacka.vlozka || "";
 
-                    // Překlad zkratky soudu na plný název
                     let soudZkratka = aktivniZnacka.soud || "Neznámý soud";
                     let plnySoud = COURTS[soudZkratka] || soudZkratka;
 
@@ -519,8 +634,14 @@
                                 if (osoba) {
                                     const titulyPred = osoba.titulPred || '';
                                     const titulyZa = osoba.titulZa ? ', ' + osoba.titulZa : '';
-                                    jmeno = `${titulyPred} ${osoba.jmeno || ''} ${osoba.prijmeni || ''}${titulyZa}`.trim().replace(/\s+/g, ' ');
+
+                                    // Použití nové funkce pro převedení jména a příjmení na normální velikost písmen
+                                    const jmenoNorm = toTitleCase(osoba.jmeno || '');
+                                    const prijmeniNorm = toTitleCase(osoba.prijmeni || '');
+
+                                    jmeno = `${titulyPred} ${jmenoNorm} ${prijmeniNorm}${titulyZa}`.trim().replace(/\s+/g, ' ');
                                 } else if (clen.pravnickaOsoba) {
+                                    // Názvy firem (pokud je statutář firma) na Title Case nepřevádíme, abychom nerozbili např. "IBM s.r.o."
                                     jmeno = clen.pravnickaOsoba.obchodniJmeno || clen.pravnickaOsoba.nazev || 'Právnická osoba';
                                 }
 
@@ -564,19 +685,17 @@
             errorMessage.style.display = 'block';
         }
 
-        // Odeslání hledání klávesou Enter
         document.getElementById('searchInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') performSearch();
         });
 
-        // Vyčištění aplikace klávesou Escape
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 document.getElementById('searchInput').value = '';
                 document.getElementById('resultsContainer').innerHTML = '';
                 document.getElementById('errorMessage').style.display = 'none';
                 document.getElementById('resultCount').style.display = 'none';
-                document.getElementById('searchInput').focus(); // Vrátí kurzor zpět do vyhledávání
+                document.getElementById('searchInput').focus();
             }
         });
     </script>
