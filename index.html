@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vyhledávání firem (ARES / OR)</title>
+
+    <link rel="icon" type="image/x-icon" href="favicon.ico"> 
+
     <style>
         :root {
             --primary-color: #0056b3;
@@ -181,7 +184,7 @@
                 color: #155724;
             }
 
-        /* Nové styly pro statutární orgán */
+        /* Styly pro orgány */
         .organ-section {
             margin-top: 12px;
             background-color: #fff;
@@ -198,7 +201,10 @@
             margin: 6px 0;
             font-style: italic;
             color: #444;
-            line-height: 1.4;
+            line-height: 1.5;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #ccc;
         }
 
         .member-list {
@@ -439,7 +445,9 @@
                 // 1. Zpracování soudu a spisové značky
                 let znacky = zaznam.spisovaZnacka || [];
                 if (!Array.isArray(znacky)) znacky = [znacky];
-                const aktivniZnacka = znacky[0];
+
+                let aktivniZnacky = znacky.filter(z => !z.datumVymazu);
+                const aktivniZnacka = aktivniZnacky[0] || znacky[0];
 
                 let vrHtml = '';
 
@@ -457,46 +465,58 @@
                     vrHtml += '<p class="loading-text">Subjekt zapsán v OR, ale data spisové značky chybí.</p>';
                 }
 
-                // 2. Zpracování statutárních orgánů (Jednatelé, způsob jednání atd.)
+                // 2. Zpracování statutárních orgánů a způsobu jednání
                 if (zaznam.statutarniOrgany && Array.isArray(zaznam.statutarniOrgany)) {
-                    zaznam.statutarniOrgany.forEach(organ => {
-                        let organHtml = '<div class="organ-section">';
 
-                        // Způsob jednání
-                        if (organ.zpusobJednani && Array.isArray(organ.zpusobJednani)) {
-                            let zpusobText = organ.zpusobJednani.map(z => z.text || '').filter(t => t).join('\n');
-                            if (zpusobText) {
-                                organHtml += `
-                                    <div class="zpusob-jednani">
-                                        <strong>Způsob jednání:</strong>
-                                        <div class="zj-text">${escapeHtml(zpusobText).replace(/\n/g, '<br>')}</div>
-                                        <button class="copy-btn" style="margin-left: 0;" data-value="${escapeHtml(zpusobText)}" onclick="copyToClipboard(this)">Kopírovat způsob jednání</button>
-                                    </div>
-                                `;
-                            }
+                    let aktivniOrgany = zaznam.statutarniOrgany.filter(organ => !organ.datumVymazu);
+
+                    aktivniOrgany.forEach(organ => {
+                        let organHtml = '<div class="organ-section">';
+                        let nazevOrganu = organ.nazevOrganu ? `<strong>${organ.nazevOrganu}:</strong>` : '<strong>Statutární orgán:</strong>';
+
+                        // OPRAVA PRO ZPŮSOB JEDNÁNÍ: ARES používá klíč `popis`, nikoliv `text`.
+                        let zpusoby = organ.zpusobJednani || [];
+                        if (!Array.isArray(zpusoby)) zpusoby = [zpusoby];
+                        let aktivniZpusoby = zpusoby.filter(z => !z.datumVymazu);
+
+                        // Zde načítáme primárně z.popis (pro zálohu z.text a z.hodnota)
+                        let zpusobText = aktivniZpusoby.map(z => z.popis || z.text || z.hodnota || '').filter(t => t).join('\n\n');
+
+                        if (zpusobText) {
+                            organHtml += `
+                                <div class="zpusob-jednani">
+                                    <strong>Způsob jednání:</strong>
+                                    <div class="zj-text">${escapeHtml(zpusobText).replace(/\n/g, '<br>')}</div>
+                                    <button class="copy-btn" style="margin-left: 0; margin-top: 5px;" data-value="${escapeHtml(zpusobText)}" onclick="copyToClipboard(this)">Kopírovat způsob jednání</button>
+                                </div>
+                            `;
                         }
 
-                        // Členové orgánu (konkrétní osoby)
-                        if (organ.clenoveStatorganu && Array.isArray(organ.clenoveStatorganu)) {
-                            let clenoveHtml = '<ul class="member-list">';
-                            organ.clenoveStatorganu.forEach(clen => {
-                                let jmeno = 'Neznámá osoba';
-                                let funkce = clen.funkce?.nazev || organ.nazevOrganu || 'Člen statutárního orgánu';
+                        // Členové orgánu
+                        let clenove = organ.clenoveOrganu || [];
+                        if (!Array.isArray(clenove)) clenove = [clenove];
 
-                                // Zjištění jména (fyzická vs právnická osoba)
-                                if (clen.osoba) {
-                                    const o = clen.osoba;
-                                    const titulyPred = o.titulPred || '';
-                                    const titulyZa = o.titulZa ? ', ' + o.titulZa : '';
-                                    jmeno = `${titulyPred} ${o.jmeno} ${o.prijmeni}${titulyZa}`.trim().replace(/\s+/g, ' ');
+                        let aktivniClenove = clenove.filter(clen => !clen.datumVymazu);
+
+                        if (aktivniClenove.length > 0) {
+                            let clenoveHtml = '<ul class="member-list">';
+                            aktivniClenove.forEach(clen => {
+                                let jmeno = 'Neznámá osoba';
+                                let funkce = clen.funkce?.nazev || organ.nazevOrganu || 'Člen';
+
+                                let osoba = clen.fyzickaOsoba || clen.osoba;
+                                if (osoba) {
+                                    const titulyPred = osoba.titulPred || '';
+                                    const titulyZa = osoba.titulZa ? ', ' + osoba.titulZa : '';
+                                    jmeno = `${titulyPred} ${osoba.jmeno || ''} ${osoba.prijmeni || ''}${titulyZa}`.trim().replace(/\s+/g, ' ');
                                 } else if (clen.pravnickaOsoba) {
-                                    jmeno = clen.pravnickaOsoba.obchodniJmeno || 'Právnická osoba';
+                                    jmeno = clen.pravnickaOsoba.obchodniJmeno || clen.pravnickaOsoba.nazev || 'Právnická osoba';
                                 }
 
                                 const safeName = escapeHtml(jmeno);
                                 clenoveHtml += `
                                     <li>
-                                        <span>${jmeno}</span> <span class="member-role">(${funkce})</span>
+                                        <span>${safeName}</span> <span class="member-role">(${escapeHtml(funkce)})</span>
                                         <button class="copy-btn" data-value="${safeName}" onclick="copyToClipboard(this)">Kopírovat jméno</button>
                                     </li>
                                 `;
@@ -505,20 +525,25 @@
 
                             organHtml += `
                                 <div class="clenove-organu">
-                                    <strong>Statutární orgán:</strong>
+                                    ${nazevOrganu}
                                     ${clenoveHtml}
                                 </div>
                             `;
                         }
 
                         organHtml += '</div>';
-                        vrHtml += organHtml;
+
+                        // Vykreslí se jen pokud něco z toho existuje
+                        if (zpusobText || aktivniClenove.length > 0) {
+                            vrHtml += organHtml;
+                        }
                     });
                 }
 
                 el.innerHTML = vrHtml;
 
             } catch (error) {
+                console.error(error);
                 el.innerHTML = '<span class="loading-text" style="color:#d9534f">Nepodařilo se načíst detailní data z OR.</span>';
             }
         }
