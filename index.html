@@ -137,10 +137,26 @@
             border-top: 1px dashed #ccc;
         }
 
+        /* Animace pro text načítání */
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+
         .loading-text {
             color: #777;
             font-size: 0.9em;
             font-style: italic;
+            animation: pulse 1.5s infinite;
         }
 
         .error {
@@ -384,8 +400,6 @@
             "KSUL": "Krajský soud v Ústí nad Labem"
         };
 
-        // Převede text z ALL CAPS na běžné formátování (Title Case)
-        // Např. "JAN NOVÁK" -> "Jan Novák", "ANNA-MARIE" -> "Anna-Marie"
         function toTitleCase(str) {
             if (!str) return '';
             return str.toLowerCase().replace(/(?:^|[\s-])\S/g, function (match) {
@@ -412,11 +426,11 @@
             if (!displayValue || displayValue === 'N/A') return `<p><strong>${label}:</strong> N/A</p>`;
             const safeCopyValue = escapeHtml(copyValue);
             return `
-                <p>
-                    <strong>${label}:</strong> <span>${displayValue}</span>
-                    <button class="copy-btn" data-value="${safeCopyValue}" onclick="copyToClipboard(this)">Kopírovat</button>
-                </p>
-            `;
+                    <p>
+                        <strong>${label}:</strong> <span>${displayValue}</span>
+                        <button class="copy-btn" data-value="${safeCopyValue}" onclick="copyToClipboard(this)">Kopírovat</button>
+                    </p>
+                `;
         }
 
         async function copyToClipboard(button) {
@@ -499,7 +513,10 @@
             const response = await fetch('https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ obchodniJmeno: name })
+                body: JSON.stringify({
+                    obchodniJmeno: name,
+                    pocet: 100 // Zvýšení limitu na 100 výsledků
+                })
             });
 
             if (!response.ok) throw new Error("Chyba při komunikaci se serverem.");
@@ -509,13 +526,22 @@
                 throw new Error("Nebyl nalezen žádný subjekt.");
             }
 
-            renderResults(data.ekonomickeSubjekty);
+            // Předáme i celkový počet nalezených záznamů (pokud existuje)
+            renderResults(data.ekonomickeSubjekty, data.pocetCelkem);
         }
 
-        function renderResults(companies) {
+        // Přidali jsme druhý parametr: totalCount
+        function renderResults(companies, totalCount = null) {
             const resultsContainer = document.getElementById('resultsContainer');
-            document.getElementById('resultCount').textContent = `Nalezeno subjektů: ${companies.length}`;
-            document.getElementById('resultCount').style.display = 'block';
+            const resultCountEl = document.getElementById('resultCount');
+
+            // Informace o počtu výsledků
+            if (totalCount && totalCount > companies.length) {
+                resultCountEl.textContent = `Zobrazeno subjektů: ${companies.length} (z celkových ${totalCount} nalezených - zpřesněte dotaz)`;
+            } else {
+                resultCountEl.textContent = `Nalezeno subjektů: ${companies.length}`;
+            }
+            resultCountEl.style.display = 'block';
 
             companies.forEach(company => {
                 const card = document.createElement('div');
@@ -561,7 +587,7 @@
                 const response = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr/${ico}`);
 
                 if (response.status === 404) {
-                    el.innerHTML = '<span class="loading-text">Nezapsáno v OR (např. živnostník vedený v ŽR).</span>';
+                    el.innerHTML = '<span class="loading-text" style="animation: none;">Nezapsáno v OR (např. živnostník vedený v ŽR).</span>';
                     return;
                 }
 
@@ -588,11 +614,11 @@
                     let parts = [oddil, vlozka].filter(p => p).join(" ");
 
                     vrHtml += `
-                        ${createRow('Rejstříkový soud', plnySoud)}
-                        ${createRow('Spisová značka', parts || 'N/A')}
-                    `;
+                            ${createRow('Rejstříkový soud', plnySoud)}
+                            ${createRow('Spisová značka', parts || 'N/A')}
+                        `;
                 } else {
-                    vrHtml += '<p class="loading-text">Subjekt zapsán v OR, ale data spisové značky chybí.</p>';
+                    vrHtml += '<p class="loading-text" style="animation: none;">Subjekt zapsán v OR, ale data spisové značky chybí.</p>';
                 }
 
                 if (zaznam.statutarniOrgany && Array.isArray(zaznam.statutarniOrgany)) {
@@ -611,12 +637,12 @@
 
                         if (zpusobText) {
                             organHtml += `
-                                <div class="zpusob-jednani">
-                                    <strong>Způsob jednání:</strong>
-                                    <div class="zj-text">${escapeHtml(zpusobText).replace(/\n/g, '<br>')}</div>
-                                    <button class="copy-btn" style="margin-left: 0; margin-top: 5px;" data-value="${escapeHtml(zpusobText)}" onclick="copyToClipboard(this)">Kopírovat způsob jednání</button>
-                                </div>
-                            `;
+                                    <div class="zpusob-jednani">
+                                        <strong>Způsob jednání:</strong>
+                                        <div class="zj-text">${escapeHtml(zpusobText).replace(/\n/g, '<br>')}</div>
+                                        <button class="copy-btn" style="margin-left: 0; margin-top: 5px;" data-value="${escapeHtml(zpusobText)}" onclick="copyToClipboard(this)">Kopírovat způsob jednání</button>
+                                    </div>
+                                `;
                         }
 
                         let clenove = organ.clenoveOrganu || [];
@@ -635,32 +661,30 @@
                                     const titulyPred = osoba.titulPred || '';
                                     const titulyZa = osoba.titulZa ? ', ' + osoba.titulZa : '';
 
-                                    // Použití nové funkce pro převedení jména a příjmení na normální velikost písmen
                                     const jmenoNorm = toTitleCase(osoba.jmeno || '');
                                     const prijmeniNorm = toTitleCase(osoba.prijmeni || '');
 
                                     jmeno = `${titulyPred} ${jmenoNorm} ${prijmeniNorm}${titulyZa}`.trim().replace(/\s+/g, ' ');
                                 } else if (clen.pravnickaOsoba) {
-                                    // Názvy firem (pokud je statutář firma) na Title Case nepřevádíme, abychom nerozbili např. "IBM s.r.o."
                                     jmeno = clen.pravnickaOsoba.obchodniJmeno || clen.pravnickaOsoba.nazev || 'Právnická osoba';
                                 }
 
                                 const safeName = escapeHtml(jmeno);
                                 clenoveHtml += `
-                                    <li>
-                                        <span>${safeName}</span> <span class="member-role">(${escapeHtml(funkce)})</span>
-                                        <button class="copy-btn" data-value="${safeName}" onclick="copyToClipboard(this)">Kopírovat jméno</button>
-                                    </li>
-                                `;
+                                        <li>
+                                            <span>${safeName}</span> <span class="member-role">(${escapeHtml(funkce)})</span>
+                                            <button class="copy-btn" data-value="${safeName}" onclick="copyToClipboard(this)">Kopírovat jméno</button>
+                                        </li>
+                                    `;
                             });
                             clenoveHtml += '</ul>';
 
                             organHtml += `
-                                <div class="clenove-organu">
-                                    ${nazevOrganu}
-                                    ${clenoveHtml}
-                                </div>
-                            `;
+                                    <div class="clenove-organu">
+                                        ${nazevOrganu}
+                                        ${clenoveHtml}
+                                    </div>
+                                `;
                         }
 
                         organHtml += '</div>';
@@ -675,7 +699,7 @@
 
             } catch (error) {
                 console.error(error);
-                el.innerHTML = '<span class="loading-text" style="color:#d9534f">Nepodařilo se načíst detailní data z OR.</span>';
+                el.innerHTML = '<span class="loading-text" style="color:#d9534f; animation: none;">Nepodařilo se načíst detailní data z OR.</span>';
             }
         }
 
@@ -686,7 +710,10 @@
         }
 
         document.getElementById('searchInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') performSearch();
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Zabrání výchozímu chování prohlížeče, pokud by byl input ve <form>
+                performSearch();
+            }
         });
 
         document.addEventListener('keydown', function (e) {
