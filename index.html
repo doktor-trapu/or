@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vyhledávání firem (ARES / OR)</title>
 
-    <link rel="icon" type="image/x-icon" href="favicon.ico"> 
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
 
     <style>
         :root {
@@ -255,6 +255,7 @@
     </div>
 
     <script>
+        // Mapování právních forem
         const LEGAL_FORMS = {
             "112": "Společnost s ručením omezeným",
             "121": "Akciová společnost",
@@ -263,6 +264,17 @@
             "205": "Družstvo",
             "706": "Spolek",
             "227": "Evropská společnost"
+        };
+
+        // Mapování rejstříkových soudů ze zkratek na plné názvy
+        const COURTS = {
+            "MSPH": "Městský soud v Praze",
+            "KSBR": "Krajský soud v Brně",
+            "KSOO": "Krajský soud v Ostravě",
+            "KSPL": "Krajský soud v Plzni",
+            "KSCB": "Krajský soud v Českých Budějovicích",
+            "KSHK": "Krajský soud v Hradci Králové",
+            "KSUL": "Krajský soud v Ústí nad Labem"
         };
 
         function escapeHtml(unsafe) {
@@ -442,7 +454,6 @@
                 const data = await response.json();
                 const zaznam = data.zaznamy ? data.zaznamy[0] : data;
 
-                // 1. Zpracování soudu a spisové značky
                 let znacky = zaznam.spisovaZnacka || [];
                 if (!Array.isArray(znacky)) znacky = [znacky];
 
@@ -454,18 +465,21 @@
                 if (aktivniZnacka) {
                     let oddil = aktivniZnacka.oddil || "";
                     let vlozka = aktivniZnacka.vlozka || "";
-                    let soud = aktivniZnacka.soud || "Neznámý soud";
+
+                    // Překlad zkratky soudu na plný název
+                    let soudZkratka = aktivniZnacka.soud || "Neznámý soud";
+                    let plnySoud = COURTS[soudZkratka] || soudZkratka;
+
                     let parts = [oddil, vlozka].filter(p => p).join(" ");
 
                     vrHtml += `
-                        ${createRow('Rejstříkový soud', soud)}
+                        ${createRow('Rejstříkový soud', plnySoud)}
                         ${createRow('Spisová značka', parts || 'N/A')}
                     `;
                 } else {
                     vrHtml += '<p class="loading-text">Subjekt zapsán v OR, ale data spisové značky chybí.</p>';
                 }
 
-                // 2. Zpracování statutárních orgánů a způsobu jednání
                 if (zaznam.statutarniOrgany && Array.isArray(zaznam.statutarniOrgany)) {
 
                     let aktivniOrgany = zaznam.statutarniOrgany.filter(organ => !organ.datumVymazu);
@@ -474,12 +488,10 @@
                         let organHtml = '<div class="organ-section">';
                         let nazevOrganu = organ.nazevOrganu ? `<strong>${organ.nazevOrganu}:</strong>` : '<strong>Statutární orgán:</strong>';
 
-                        // OPRAVA PRO ZPŮSOB JEDNÁNÍ: ARES používá klíč `popis`, nikoliv `text`.
                         let zpusoby = organ.zpusobJednani || [];
                         if (!Array.isArray(zpusoby)) zpusoby = [zpusoby];
                         let aktivniZpusoby = zpusoby.filter(z => !z.datumVymazu);
 
-                        // Zde načítáme primárně z.popis (pro zálohu z.text a z.hodnota)
                         let zpusobText = aktivniZpusoby.map(z => z.popis || z.text || z.hodnota || '').filter(t => t).join('\n\n');
 
                         if (zpusobText) {
@@ -492,7 +504,6 @@
                             `;
                         }
 
-                        // Členové orgánu
                         let clenove = organ.clenoveOrganu || [];
                         if (!Array.isArray(clenove)) clenove = [clenove];
 
@@ -533,7 +544,6 @@
 
                         organHtml += '</div>';
 
-                        // Vykreslí se jen pokud něco z toho existuje
                         if (zpusobText || aktivniClenove.length > 0) {
                             vrHtml += organHtml;
                         }
@@ -554,8 +564,20 @@
             errorMessage.style.display = 'block';
         }
 
+        // Odeslání hledání klávesou Enter
         document.getElementById('searchInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') performSearch();
+        });
+
+        // Vyčištění aplikace klávesou Escape
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                document.getElementById('searchInput').value = '';
+                document.getElementById('resultsContainer').innerHTML = '';
+                document.getElementById('errorMessage').style.display = 'none';
+                document.getElementById('resultCount').style.display = 'none';
+                document.getElementById('searchInput').focus(); // Vrátí kurzor zpět do vyhledávání
+            }
         });
     </script>
 
