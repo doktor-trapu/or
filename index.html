@@ -21,6 +21,7 @@
             align-items: center;
             padding: 50px 20px;
             margin: 0;
+            min-height: 100vh;
         }
 
         .container {
@@ -30,6 +31,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             width: 100%;
             max-width: 600px;
+            flex-grow: 0;
         }
 
         h1 {
@@ -178,6 +180,15 @@
                 border-color: #c3e6cb;
                 color: #155724;
             }
+
+        /* Footer Styles */
+        .footer {
+            margin-top: auto; /* Pushes footer to the bottom if content is short */
+            padding-top: 30px;
+            font-size: 0.85rem;
+            color: #888;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -198,6 +209,10 @@
         <div id="errorMessage" class="error"></div>
         <div id="resultCount" class="result-count"></div>
         <div id="resultsContainer" class="results-container"></div>
+    </div>
+
+    <div class="footer">
+        &copy; Jáchym Hykrda 2026
     </div>
 
     <script>
@@ -221,13 +236,11 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // Formats an 8-digit IČO into "XXX XX XXX"
         function formatIco(ico) {
             if (!ico || ico.length !== 8) return ico;
             return `${ico.substring(0, 3)} ${ico.substring(3, 5)} ${ico.substring(5, 8)}`;
         }
 
-        // Now accepts a 3rd parameter: copyValue. If not provided, it copies the displayValue.
         function createRow(label, displayValue, copyValue = displayValue) {
             if (!displayValue || displayValue === 'N/A') return `<p><strong>${label}:</strong> N/A</p>`;
             const safeCopyValue = escapeHtml(copyValue);
