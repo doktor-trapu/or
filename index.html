@@ -44,18 +44,6 @@
             margin-bottom: 20px;
         }
 
-        .search-options {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 15px;
-        }
-
-            .search-options label {
-                cursor: pointer;
-                font-weight: 500;
-            }
-
         .input-group {
             display: flex;
             gap: 10px;
@@ -137,7 +125,6 @@
             border-top: 1px dashed #ccc;
         }
 
-        /* Animace pro text načítání */
         @keyframes pulse {
             0% {
                 opacity: 0.6;
@@ -237,7 +224,6 @@
             font-size: 0.9em;
         }
 
-        /* Nové tlačítko pro odkaz na or.justice.cz */
         .external-link-btn {
             display: inline-block;
             margin-top: 15px;
@@ -270,13 +256,8 @@
     <div class="container">
         <h1>Vyhledávání osob (ARES / OR)</h1>
 
-        <div class="search-options">
-            <label><input type="radio" name="searchType" value="ico" checked onchange="toggleInput()"> Podle IČO</label>
-            <label><input type="radio" name="searchType" value="name" onchange="toggleInput()"> Podle názvu</label>
-        </div>
-
         <div class="input-group">
-            <input type="text" id="searchInput" placeholder="Zadejte IČO (např. 00006947)" maxlength="8">
+            <input type="text" id="searchInput" placeholder="Zadejte IČO nebo název subjektu...">
             <button id="searchBtn" class="primary-btn" onclick="performSearch()">Hledat</button>
         </div>
 
@@ -469,24 +450,8 @@
             }
         }
 
-        function toggleInput() {
-            const searchType = document.querySelector('input[name="searchType"]:checked').value;
-            const searchInput = document.getElementById('searchInput');
-
-            if (searchType === 'ico') {
-                searchInput.placeholder = "Zadejte IČO (např. 00006947)";
-                searchInput.maxLength = 8;
-            } else {
-                searchInput.placeholder = "Zadejte název (např. Alza)";
-                searchInput.removeAttribute('maxLength');
-            }
-            searchInput.value = '';
-            searchInput.focus();
-        }
-
         async function performSearch() {
-            const query = document.getElementById('searchInput').value.trim();
-            const searchType = document.querySelector('input[name="searchType"]:checked').value;
+            const rawQuery = document.getElementById('searchInput').value.trim();
             const searchBtn = document.getElementById('searchBtn');
             const resultsContainer = document.getElementById('resultsContainer');
             const errorMessage = document.getElementById('errorMessage');
@@ -496,7 +461,7 @@
             errorMessage.style.display = 'none';
             resultCount.style.display = 'none';
 
-            if (!query) {
+            if (!rawQuery) {
                 showError("Zadejte prosím hledaný výraz.");
                 return;
             }
@@ -505,12 +470,20 @@
             searchBtn.textContent = 'Hledám...';
 
             try {
-                if (searchType === 'ico') {
-                    if (!/^\d+$/.test(query)) throw new Error("IČO musí obsahovat pouze číslice.");
-                    await fetchByIco(query.padStart(8, '0'));
+                // Detekce: Pokud vstup obsahuje POZE čísla (ignoruje mezery), bereme to jako IČO
+                const queryNoSpaces = rawQuery.replace(/\s/g, '');
+                const isIco = /^\d+$/.test(queryNoSpaces);
+
+                if (isIco) {
+                    if (queryNoSpaces.length > 8) {
+                        throw new Error("IČO nemůže mít více než 8 číslic. Pro vyhledávání podle názvu zadejte i písmena.");
+                    }
+                    await fetchByIco(queryNoSpaces.padStart(8, '0'));
                 } else {
-                    if (query.length < 3) throw new Error("Zadejte alespoň 3 znaky.");
-                    await fetchByName(query);
+                    if (rawQuery.length < 3) {
+                        throw new Error("Pro vyhledávání podle názvu zadejte alespoň 3 znaky.");
+                    }
+                    await fetchByName(rawQuery);
                 }
             } catch (error) {
                 showError(error.message);
@@ -535,7 +508,7 @@
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify({
                     obchodniJmeno: name,
-                    pocet: 100 // Zvýšeno na 100
+                    pocet: 100
                 })
             });
 
@@ -675,8 +648,8 @@
 
                                 let osoba = clen.fyzickaOsoba || clen.osoba;
                                 if (osoba) {
-                                    const titulyPred = osoba.titulPred || '';
-                                    const titulyZa = osoba.titulZa ? ', ' + osoba.titulZa : '';
+                                    const titulyPred = osoba.titulPredJmenem || osoba.titulPred || '';
+                                    const titulyZa = (osoba.titulZaJmenem || osoba.titulZa) ? ', ' + (osoba.titulZaJmenem || osoba.titulZa) : '';
 
                                     const jmenoNorm = toTitleCase(osoba.jmeno || '');
                                     const prijmeniNorm = toTitleCase(osoba.prijmeni || '');
@@ -712,7 +685,6 @@
                     });
                 }
 
-                // --- PŘIDANÉ TLAČÍTKO ODKAZU ---
                 vrHtml += `
                         <a href="https://or.justice.cz/ias/ui/rejstrik-dotaz?dotaz=${ico}" target="_blank" class="external-link-btn">
                             ↗ Zobrazit na or.justice.cz
