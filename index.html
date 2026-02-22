@@ -237,6 +237,26 @@
             font-size: 0.9em;
         }
 
+        /* Nové tlačítko pro odkaz na or.justice.cz */
+        .external-link-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 8px 12px;
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+            .external-link-btn:hover {
+                background-color: var(--primary-color);
+                color: white;
+            }
+
         .footer {
             margin-top: 30px;
             font-size: 0.85rem;
@@ -515,7 +535,7 @@
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify({
                     obchodniJmeno: name,
-                    pocet: 100 // Zvýšení limitu na 100 výsledků
+                    pocet: 100 // Zvýšeno na 100
                 })
             });
 
@@ -526,16 +546,13 @@
                 throw new Error("Nebyl nalezen žádný subjekt.");
             }
 
-            // Předáme i celkový počet nalezených záznamů (pokud existuje)
             renderResults(data.ekonomickeSubjekty, data.pocetCelkem);
         }
 
-        // Přidali jsme druhý parametr: totalCount
         function renderResults(companies, totalCount = null) {
             const resultsContainer = document.getElementById('resultsContainer');
             const resultCountEl = document.getElementById('resultCount');
 
-            // Informace o počtu výsledků
             if (totalCount && totalCount > companies.length) {
                 resultCountEl.textContent = `Zobrazeno subjektů: ${companies.length} (z celkových ${totalCount} nalezených - zpřesněte dotaz)`;
             } else {
@@ -559,19 +576,19 @@
                 const formattedIco = ico !== 'N/A' ? formatIco(ico) : 'N/A';
 
                 card.innerHTML = `
-                    <div class="company-header">
-                        <div class="company-name">${name}</div>
-                        <button class="copy-btn" data-value="${safeName}" onclick="copyToClipboard(this)">Kopírovat název</button>
-                    </div>
-                    ${createRow('IČO', formattedIco, ico)}
-                    ${createRow('DIČ', dic)}
-                    ${createRow('Sídlo', address)}
-                    ${createRow('Právní forma', legalForm)}
+                        <div class="company-header">
+                            <div class="company-name">${name}</div>
+                            <button class="copy-btn" data-value="${safeName}" onclick="copyToClipboard(this)">Kopírovat název</button>
+                        </div>
+                        ${createRow('IČO', formattedIco, ico)}
+                        ${createRow('DIČ', dic)}
+                        ${createRow('Sídlo', address)}
+                        ${createRow('Právní forma', legalForm)}
 
-                    <div class="vr-info" id="vr-${ico}">
-                        <span class="loading-text">Ověřuji zápis v Obchodním rejstříku...</span>
-                    </div>
-                `;
+                        <div class="vr-info" id="vr-${ico}">
+                            <span class="loading-text">Ověřuji zápis v Obchodním rejstříku...</span>
+                        </div>
+                    `;
 
                 resultsContainer.appendChild(card);
 
@@ -695,6 +712,13 @@
                     });
                 }
 
+                // --- PŘIDANÉ TLAČÍTKO ODKAZU ---
+                vrHtml += `
+                        <a href="https://or.justice.cz/ias/ui/rejstrik-dotaz?dotaz=${ico}" target="_blank" class="external-link-btn">
+                            ↗ Zobrazit na or.justice.cz
+                        </a>
+                    `;
+
                 el.innerHTML = vrHtml;
 
             } catch (error) {
@@ -711,7 +735,7 @@
 
         document.getElementById('searchInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
-                e.preventDefault(); // Zabrání výchozímu chování prohlížeče, pokud by byl input ve <form>
+                e.preventDefault();
                 performSearch();
             }
         });
