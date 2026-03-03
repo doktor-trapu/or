@@ -151,9 +151,10 @@
             text-align: center;
             margin-top: 10px;
             display: none;
-            padding: 10px;
+            padding: 15px;
             background-color: #fdf7f7;
             border-radius: 4px;
+            line-height: 1.5;
         }
 
         .result-count {
@@ -257,7 +258,7 @@
         <h1>Vyhledávání osob (ARES / OR)</h1>
 
         <div class="input-group">
-            <input type="text" id="searchInput" placeholder="Zadejte IČO nebo název subjektu...">
+            <input type="text" id="searchInput" placeholder="Zadejte IČO nebo celá slova z názvu...">
             <button id="searchBtn" class="primary-btn" onclick="performSearch()">Hledat</button>
         </div>
 
@@ -470,7 +471,6 @@
             searchBtn.textContent = 'Hledám...';
 
             try {
-                // Detekce: Pokud vstup obsahuje POZE čísla (ignoruje mezery), bereme to jako IČO
                 const queryNoSpaces = rawQuery.replace(/\s/g, '');
                 const isIco = /^\d+$/.test(queryNoSpaces);
 
@@ -516,7 +516,7 @@
             const data = await response.json();
 
             if (!data.ekonomickeSubjekty || data.ekonomickeSubjekty.length === 0) {
-                throw new Error("Nebyl nalezen žádný subjekt.");
+                throw new Error("Nic nenalezeno.<br><br>💡 <strong>Tip:</strong> Státní databáze neumí hledat pouze části slov (např. <em>Agrof</em>). Zadávejte prosím vždy celá slova z názvu subjektu (např. <em>Agrofert</em>).");
             }
 
             renderResults(data.ekonomickeSubjekty, data.pocetCelkem);
@@ -548,12 +548,13 @@
                 const safeName = escapeHtml(name);
                 const formattedIco = ico !== 'N/A' ? formatIco(ico) : 'N/A';
 
+                // ZMĚNA ZDE: Odstraněn 3. parametr "ico", takže se nyní automaticky zkopíruje "formattedIco" (s mezerami)
                 card.innerHTML = `
                         <div class="company-header">
                             <div class="company-name">${name}</div>
                             <button class="copy-btn" data-value="${safeName}" onclick="copyToClipboard(this)">Kopírovat název</button>
                         </div>
-                        ${createRow('IČO', formattedIco, ico)}
+                        ${createRow('IČO', formattedIco)}
                         ${createRow('DIČ', dic)}
                         ${createRow('Sídlo', address)}
                         ${createRow('Právní forma', legalForm)}
@@ -701,7 +702,7 @@
 
         function showError(message) {
             const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = message;
+            errorMessage.innerHTML = message;
             errorMessage.style.display = 'block';
         }
 
