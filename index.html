@@ -10,7 +10,6 @@
 
         gtag('config', 'G-8HC4E801LJ');
     </script>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lepší OR</title>
@@ -445,6 +444,14 @@
                 `;
         }
 
+        function createRowDynamic(label, contentHtml, containerId) {
+            return `
+                    <p>
+                        <strong>${label}:</strong> <span id="${containerId}">${contentHtml}</span>
+                    </p>
+                `;
+        }
+
         async function copyToClipboard(button) {
             const textToCopy = button.getAttribute('data-value');
             try {
@@ -522,7 +529,7 @@
                 })
             });
 
-            if (!response.ok) throw new Error("Chyba při komunikaci se serverem. Zkuste zúžit vyhledávání.");
+            if (!response.ok) throw new Error("Chyba při komunikaci se serverem.");
             const data = await response.json();
 
             if (!data.ekonomickeSubjekty || data.ekonomickeSubjekty.length === 0) {
@@ -558,7 +565,6 @@
                 const safeName = escapeHtml(name);
                 const formattedIco = ico !== 'N/A' ? formatIco(ico) : 'N/A';
 
-                // ZMĚNA ZDE: Odstraněn 3. parametr "ico", takže se nyní automaticky zkopíruje "formattedIco" (s mezerami)
                 card.innerHTML = `
                         <div class="company-header">
                             <div class="company-name">${name}</div>
@@ -566,6 +572,7 @@
                         </div>
                         ${createRow('IČO', formattedIco)}
                         ${createRow('DIČ', dic)}
+                        ${createRowDynamic('Datová schránka', '<span class="loading-text" style="animation: none;">Zjišťuji...</span>', `ds-container-${ico}`)}
                         ${createRow('Sídlo', address)}
                         ${createRow('Právní forma', legalForm)}
 
@@ -578,8 +585,59 @@
 
                 if (ico !== 'N/A') {
                     fetchVrDetails(ico);
+                    fetchDsDetails(ico);
                 }
             });
+        }
+
+        // --- ZDE JE OPRAVENÁ LOGIKA PRO DATOVOU SCHRÁNKU ---
+        async function fetchDsDetails(ico) {
+            const el = document.getElementById(`ds-container-${ico}`);
+            if (!el) return;
+
+            try {
+                const res = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-ros/${ico}`);
+
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // Datové schránky u specifických registrů (ROS) bývají vždy zabalené v uzlu "zaznamy"
+                    const zaznam = data.zaznamy ? data.zaznamy[0] : data;
+
+                    if (zaznam && zaznam.datoveSchranky && Array.isArray(zaznam.datoveSchranky)) {
+
+                        // Zkusíme najít schránku podle známých klíčů
+                        let extracted = zaznam.datoveSchranky.map(ds => {
+                            if (typeof ds === 'string') return ds;
+                            return ds.idDatoveSchranky || ds.datovaSchranka || ds.identifikator || ds.idDs || null;
+                        }).filter(Boolean);
+
+                        // Záchranné lano: Pokud stát změnil název klíče, najdeme jakýkoliv 7místný textový řetězec
+                        if (extracted.length === 0) {
+                            extracted = zaznam.datoveSchranky.map(ds => {
+                                for (let key in ds) {
+                                    if (typeof ds[key] === 'string' && /^[a-zA-Z0-9]{7}$/.test(ds[key])) {
+                                        return ds[key];
+                                    }
+                                }
+                                return null;
+                            }).filter(Boolean);
+                        }
+
+                        if (extracted.length > 0) {
+                            const val = extracted.join(', ');
+                            const safeVal = escapeHtml(val);
+                            el.innerHTML = `<span>${safeVal}</span> <button class="copy-btn" data-value="${safeVal}" onclick="copyToClipboard(this)">Kopírovat</button>`;
+                            return;
+                        }
+                    }
+                }
+
+                el.innerHTML = '<span style="color: #999;">Nezjištěna / Nemá zřízenou</span>';
+            } catch (e) {
+                console.error("Nepodařilo se dotáhnout datovou schránku:", e);
+                el.innerHTML = '<span style="color: #d9534f;">Chyba načítání</span>';
+            }
         }
 
         async function fetchVrDetails(ico) {
