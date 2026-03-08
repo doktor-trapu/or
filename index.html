@@ -529,7 +529,7 @@
                 })
             });
 
-            if (!response.ok) throw new Error("Chyba při komunikaci se serverem.");
+            if (!response.ok) throw new Error("Chyba při komunikaci se serverem. Zkuste zúžit vyhledávání.");
             const data = await response.json();
 
             if (!data.ekonomickeSubjekty || data.ekonomickeSubjekty.length === 0) {
