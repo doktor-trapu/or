@@ -556,7 +556,17 @@
 
                 const name = company.obchodniJmeno || 'Neznámý název';
                 const ico = company.ico || 'N/A';
-                const dic = company.dic || 'N/A';
+
+                // --- OPRAVA PRO SKUPINOVÁ DIČ ---
+                let dic = 'N/A';
+                // API může někdy vrátit string "N/A", proto ho explicitně filtrujeme
+                if (company.dicSkDph && company.dicSkDph !== 'N/A') {
+                    dic = `${company.dicSkDph} (skupinové)`;
+                } else if (company.dic && company.dic !== 'Skupinove_DPH') {
+                    dic = company.dic;
+                }
+                // --------------------------------
+
                 const address = company.sidlo?.textovaAdresa || 'N/A';
 
                 const lfCode = company.pravniForma;
